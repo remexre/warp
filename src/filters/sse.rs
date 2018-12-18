@@ -45,11 +45,13 @@ use serde::Serialize;
 use serde_json;
 use tokio::{clock::now, timer::Delay};
 
+use self::sealed::{
+    BoxedServerSentEvent, EitherServerSentEvent, SseError, SseField, SseFormat, SseWrapper,
+};
+use super::{header, header::MissingHeader};
 use filter::One;
 use reply::{ReplySealed, Response};
 use {Filter, Rejection, Reply};
-use super::{header, header::MissingHeader};
-use self::sealed::{BoxedServerSentEvent, EitherServerSentEvent, SseError, SseField, SseFormat, SseWrapper};
 
 /// Server-sent event message
 pub trait ServerSentEvent: SseFormat + Sized + Send + 'static {
@@ -285,14 +287,12 @@ pub fn last_event_id<T>() -> impl Filter<Extract = One<Option<T>>, Error = Rejec
 where
     T: FromStr + Send,
 {
-    header::header("last-event-id")
-        .map(Some)
-        .or_else(|rejection: Rejection| {
-            if rejection.find_cause::<MissingHeader>().is_some() {
-                return Ok((None,));
-            }
-            Err(rejection)
-        })
+    header::header("last-event-id").map(Some).or_else(|rejection: Rejection| {
+        if rejection.find_cause::<MissingHeader>().is_some() {
+            return Ok((None,));
+        }
+        Err(rejection)
+    })
 }
 
 /// Creates a Server-sent Events filter.
@@ -314,16 +314,14 @@ where
 /// - Header `cache-control: no-cache`.
 pub fn sse() -> impl Filter<Extract = One<Sse>, Error = Rejection> + Copy {
     ::get2()
-        .and(
-            header::exact_ignore_case("connection", "keep-alive").or_else(
-                |rejection: Rejection| {
-                    if rejection.find_cause::<MissingHeader>().is_some() {
-                        return Ok(());
-                    }
-                    Err(rejection)
-                },
-            ),
-        )
+        .and(header::exact_ignore_case("connection", "keep-alive").or_else(
+            |rejection: Rejection| {
+                if rejection.find_cause::<MissingHeader>().is_some() {
+                    return Ok(());
+                }
+                Err(rejection)
+            },
+        ))
         .map(|| Sse)
 }
 
@@ -403,7 +401,9 @@ impl Sse {
         S::Item: ServerSentEvent,
         S::Error: StdError + Send + Sync + 'static,
     {
-        SseReply { event_stream }
+        SseReply {
+            event_stream,
+        }
     }
 }
 
@@ -473,9 +473,7 @@ where
     S::Item: ServerSentEvent + Send,
     S::Error: StdError + Send + Sync + 'static,
 {
-    let max_interval = keep_interval
-        .into()
-        .unwrap_or_else(|| Duration::from_secs(15));
+    let max_interval = keep_interval.into().unwrap_or_else(|| Duration::from_secs(15));
     let alive_timer = Delay::new(now() + max_interval);
     SseKeepAlive {
         event_stream,
@@ -586,8 +584,7 @@ mod sealed {
     {
         pub fn format(event: &'a T) -> Result<String, SseError> {
             let mut buf = String::new();
-            buf.write_fmt(format_args!("{}", SseWrapper(event)))
-                .map_err(|_| SseError)?;
+            buf.write_fmt(format_args!("{}", SseWrapper(event))).map_err(|_| SseError)?;
             buf.shrink_to_fit();
             Ok(buf)
         }

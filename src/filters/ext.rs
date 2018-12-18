@@ -1,18 +1,19 @@
 //! Request Extensions
 
-use ::filter::{Filter, filter_fn_one};
-use ::reject::{self, Rejection};
+use filter::{filter_fn_one, Filter};
+use reject::{self, Rejection};
 
 /// Get a previously set extension of the current route.
 ///
 /// If the extension doesn't exist, this rejects with a `MissingExtension`.
-pub fn get<T: Clone + Send + Sync + 'static>() -> impl Filter<Extract=(T,), Error=Rejection> + Copy {
+pub fn get<T: Clone + Send + Sync + 'static>(
+) -> impl Filter<Extract = (T,), Error = Rejection> + Copy {
     filter_fn_one(|route| {
-        route
-            .extensions()
-            .get::<T>()
-            .cloned()
-            .ok_or_else(|| reject::known(MissingExtension { _p: () }))
+        route.extensions().get::<T>().cloned().ok_or_else(|| {
+            reject::known(MissingExtension {
+                _p: (),
+            })
+        })
     })
 }
 
@@ -47,4 +48,3 @@ impl ::std::error::Error for MissingExtension {
         "Missing request extension"
     }
 }
-

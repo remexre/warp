@@ -6,16 +6,9 @@ use warp::{http::Method, Filter};
 
 #[test]
 fn allow_methods() {
-    let cors = warp::cors()
-        .allow_methods(&[
-            Method::GET,
-            Method::POST,
-            Method::DELETE,
-        ]);
+    let cors = warp::cors().allow_methods(&[Method::GET, Method::POST, Method::DELETE]);
 
-    let route = warp::any()
-        .map(warp::reply)
-        .with(cors);
+    let route = warp::any().map(warp::reply).with(cors);
 
     let res = warp::test::request()
         .method("OPTIONS")
@@ -36,13 +29,9 @@ fn allow_methods() {
 
 #[test]
 fn origin_not_allowed() {
-    let cors = warp::cors()
-        .allow_methods(&[Method::DELETE])
-        .allow_origin("https://hyper.rs");
+    let cors = warp::cors().allow_methods(&[Method::DELETE]).allow_origin("https://hyper.rs");
 
-    let route = warp::any()
-        .map(warp::reply)
-        .with(cors);
+    let route = warp::any().map(warp::reply).with(cors);
 
     let res = warp::test::request()
         .method("OPTIONS")
@@ -67,9 +56,7 @@ fn success() {
         .allow_methods(&[Method::POST, Method::DELETE])
         .max_age(30);
 
-    let route = warp::any()
-        .map(warp::reply)
-        .with(cors);
+    let route = warp::any().map(warp::reply).with(cors);
 
     // preflight
     let res = warp::test::request()
@@ -90,10 +77,8 @@ fn success() {
     );
 
     // cors request
-    let res = warp::test::request()
-        .method("DELETE")
-        .header("origin", "https://hyper.rs")
-        .reply(&route);
+    let res =
+        warp::test::request().method("DELETE").header("origin", "https://hyper.rs").reply(&route);
     assert_eq!(res.status(), 200);
     assert_eq!(res.headers()["access-control-allow-origin"], "https://hyper.rs");
     assert_eq!(res.headers()["access-control-allow-credentials"], "true");

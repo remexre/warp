@@ -2,11 +2,11 @@ use std::net::SocketAddr;
 
 use futures::{Future, Poll};
 
-use ::{Filter, Request};
-use ::reject::Reject;
-use ::reply::{Reply};
-use ::route::{self, Route};
-use ::server::{IntoWarpService, WarpService};
+use reject::Reject;
+use reply::Reply;
+use route::{self, Route};
+use server::{IntoWarpService, WarpService};
+use {Filter, Request};
 
 #[derive(Copy, Clone, Debug)]
 pub struct FilteredService<F> {
@@ -85,4 +85,3 @@ where
         }
     }
 }
-

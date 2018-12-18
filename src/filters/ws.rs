@@ -10,18 +10,18 @@ use headers::{Connection, HeaderMapExt, SecWebsocketAccept, SecWebsocketKey, Upg
 use http;
 use tungstenite::protocol::{self, WebSocketConfig};
 
-use ::error::Kind;
-use ::filter::{Filter, FilterClone, One};
-use ::reject::{Rejection};
-use ::reply::{ReplySealed, Reply, Response};
 use super::{body, header};
+use error::Kind;
+use filter::{Filter, FilterClone, One};
+use reject::Rejection;
+use reply::{Reply, ReplySealed, Response};
 
 #[doc(hidden)]
-#[deprecated(note="will be replaced by ws2")]
-pub fn ws<F, U>(fun: F) -> impl FilterClone<Extract=One<Ws>, Error=Rejection>
+#[deprecated(note = "will be replaced by ws2")]
+pub fn ws<F, U>(fun: F) -> impl FilterClone<Extract = One<Ws>, Error = Rejection>
 where
     F: Fn(WebSocket) -> U + Clone + Send + 'static,
-    U: Future<Item=(), Error=()> + Send + 'static,
+    U: Future<Item = (), Error = ()> + Send + 'static,
 {
     ws_new(move || {
         let fun = fun.clone();
@@ -31,7 +31,6 @@ where
         }
     })
 }
-
 
 /// Creates a Websocket Filter.
 ///
@@ -54,7 +53,7 @@ where
 /// - Header `connection: upgrade`
 /// - Header `upgrade: websocket`
 /// - Header `sec-websocket-accept` with the hash value of the received key.
-pub fn ws2() -> impl Filter<Extract=One<Ws2>, Error=Rejection> + Copy {
+pub fn ws2() -> impl Filter<Extract = One<Ws2>, Error = Rejection> + Copy {
     let connection_has_upgrade = header::header2()
         .and_then(|conn: ::headers::Connection| {
             if conn.contains("upgrade") {
@@ -73,29 +72,36 @@ pub fn ws2() -> impl Filter<Extract=One<Ws2>, Error=Rejection> + Copy {
         //.and(header::exact2(SecWebsocketVersion::V13))
         .and(header::header2::<SecWebsocketKey>())
         .and(body::body())
-        .map(move |key: SecWebsocketKey, body: ::hyper::Body| {
-            Ws2 {
-                body,
-                config: None,
-                key,
-            }
+        .map(move |key: SecWebsocketKey, body: ::hyper::Body| Ws2 {
+            body,
+            config: None,
+            key,
         })
 }
 
 #[allow(deprecated)]
-fn ws_new<F1, F2>(factory: F1) -> impl FilterClone<Extract=One<Ws>, Error=Rejection>
+fn ws_new<F1, F2>(factory: F1) -> impl FilterClone<Extract = One<Ws>, Error = Rejection>
 where
     F1: Fn() -> F2 + Clone + Send + 'static,
     F2: Fn(WebSocket) + Send + 'static,
 {
-    ws2()
-        .map(move |Ws2 { key, config, body }| {
+    ws2().map(
+        move |Ws2 {
+                  key,
+                  config,
+                  body,
+              }| {
             let fun = factory();
-            let fut = body.on_upgrade()
+            let fut = body
+                .on_upgrade()
                 .map(move |upgraded| {
                     trace!("websocket upgrade complete");
 
-                    let io = protocol::WebSocket::from_raw_socket(upgraded, protocol::Role::Server, config);
+                    let io = protocol::WebSocket::from_raw_socket(
+                        upgraded,
+                        protocol::Role::Server,
+                        config,
+                    );
 
                     fun(WebSocket {
                         inner: io,
@@ -107,11 +113,12 @@ where
             Ws {
                 key,
             }
-        })
+        },
+    )
 }
 
 #[doc(hidden)]
-#[deprecated(note="will be replaced with Ws2")]
+#[deprecated(note = "will be replaced with Ws2")]
 pub struct Ws {
     key: SecWebsocketKey,
 }
@@ -134,8 +141,7 @@ impl ReplySealed for Ws {
 #[allow(deprecated)]
 impl fmt::Debug for Ws {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Ws")
-            .finish()
+        f.debug_struct("Ws").finish()
     }
 }
 
@@ -153,7 +159,7 @@ impl Ws2 {
     pub fn on_upgrade<F, U>(self, func: F) -> impl Reply
     where
         F: FnOnce(WebSocket) -> U + Send + 'static,
-        U: Future<Item=(), Error=()> + Send + 'static,
+        U: Future<Item = (), Error = ()> + Send + 'static,
     {
         WsReply {
             ws: self,
@@ -165,18 +171,14 @@ impl Ws2 {
 
     /// Set the size of the internal message send queue.
     pub fn max_send_queue(mut self, max: usize) -> Self {
-        self
-            .config
-            .get_or_insert_with(|| WebSocketConfig::default())
-            .max_send_queue = Some(max);
+        self.config.get_or_insert_with(|| WebSocketConfig::default()).max_send_queue = Some(max);
         self
     }
 }
 
 impl fmt::Debug for Ws2 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Ws2")
-            .finish()
+        f.debug_struct("Ws2").finish()
     }
 }
 
@@ -189,17 +191,21 @@ struct WsReply<F> {
 impl<F, U> ReplySealed for WsReply<F>
 where
     F: FnOnce(WebSocket) -> U + Send + 'static,
-    U: Future<Item=(), Error=()> + Send + 'static,
+    U: Future<Item = (), Error = ()> + Send + 'static,
 {
     fn into_response(self) -> Response {
         let on_upgrade = self.on_upgrade;
         let config = self.ws.config;
-        let fut = self.ws.body.on_upgrade()
+        let fut = self
+            .ws
+            .body
+            .on_upgrade()
             .map_err(|err| debug!("ws upgrade error: {}", err))
             .and_then(move |upgraded| {
                 trace!("websocket upgrade complete");
 
-                let io = protocol::WebSocket::from_raw_socket(upgraded, protocol::Role::Server, config);
+                let io =
+                    protocol::WebSocket::from_raw_socket(upgraded, protocol::Role::Server, config);
 
                 on_upgrade(WebSocket {
                     inner: io,
@@ -233,9 +239,7 @@ impl WebSocket {
 
     /// Gracefully close this websocket.
     pub fn close(mut self) -> impl Future<Item = (), Error = ::Error> {
-        future::poll_fn(move || {
-            Sink::close(&mut self)
-        })
+        future::poll_fn(move || Sink::close(&mut self))
     }
 }
 
@@ -247,11 +251,13 @@ impl Stream for WebSocket {
         loop {
             let msg = match self.inner.read_message() {
                 Ok(item) => item,
-                Err(::tungstenite::Error::Io(ref err)) if err.kind() == WouldBlock => return Ok(Async::NotReady),
+                Err(::tungstenite::Error::Io(ref err)) if err.kind() == WouldBlock => {
+                    return Ok(Async::NotReady);
+                }
                 Err(::tungstenite::Error::ConnectionClosed(frame)) => {
                     trace!("websocket closed: {:?}", frame);
                     return Ok(Async::Ready(None));
-                },
+                }
                 Err(e) => {
                     debug!("websocket poll error: {}", e);
                     return Err(Kind::Ws(e).into());
@@ -259,13 +265,13 @@ impl Stream for WebSocket {
             };
 
             match msg {
-                msg @ protocol::Message::Text(..) |
-                msg @ protocol::Message::Binary(..) |
-                msg @ protocol::Message::Ping(..) => {
+                msg @ protocol::Message::Text(..)
+                | msg @ protocol::Message::Binary(..)
+                | msg @ protocol::Message::Ping(..) => {
                     return Ok(Async::Ready(Some(Message {
                         inner: msg,
                     })));
-                },
+                }
                 protocol::Message::Pong(payload) => {
                     trace!("websocket client pong: {:?}", payload);
                 }
@@ -288,16 +294,18 @@ impl Sink for WebSocket {
                 // tungstenite already auto-reponds to `Ping`s with a `Pong`,
                 // so this just prevents accidentally sending extra pings.
                 return Ok(AsyncSink::Ready);
-            },
-            _ => ()
+            }
+            _ => (),
         }
 
         match self.inner.write_message(item.inner) {
             Ok(()) => Ok(AsyncSink::Ready),
             Err(::tungstenite::Error::SendQueueFull(inner)) => {
                 debug!("websocket send queue full");
-                Ok(AsyncSink::NotReady(Message { inner }))
-            },
+                Ok(AsyncSink::NotReady(Message {
+                    inner,
+                }))
+            }
             Err(::tungstenite::Error::Io(ref err)) if err.kind() == WouldBlock => {
                 // the message was accepted and partly written, so this
                 // isn't an error.
@@ -315,7 +323,7 @@ impl Sink for WebSocket {
             Ok(()) => Ok(Async::Ready(())),
             Err(::tungstenite::Error::Io(ref err)) if err.kind() == WouldBlock => {
                 Ok(Async::NotReady)
-            },
+            }
             Err(err) => {
                 debug!("websocket poll_complete error: {}", err);
                 Err(Kind::Ws(err).into())
@@ -328,11 +336,11 @@ impl Sink for WebSocket {
             Ok(()) => Ok(Async::Ready(())),
             Err(::tungstenite::Error::Io(ref err)) if err.kind() == WouldBlock => {
                 Ok(Async::NotReady)
-            },
+            }
             Err(::tungstenite::Error::ConnectionClosed(frame)) => {
                 trace!("websocket closed: {:?}", frame);
                 return Ok(Async::Ready(()));
-            },
+            }
             Err(err) => {
                 debug!("websocket close error: {}", err);
                 Err(Kind::Ws(err).into())
@@ -343,8 +351,7 @@ impl Sink for WebSocket {
 
 impl fmt::Debug for WebSocket {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("WebSocket")
-            .finish()
+        f.debug_struct("WebSocket").finish()
     }
 }
 
@@ -392,7 +399,7 @@ impl Message {
     pub fn to_str(&self) -> Result<&str, ()> {
         match self.inner {
             protocol::Message::Text(ref s) => Ok(s),
-            _ => Err(())
+            _ => Err(()),
         }
     }
 
@@ -411,4 +418,3 @@ impl fmt::Debug for Message {
         fmt::Debug::fmt(&self.inner, f)
     }
 }
-

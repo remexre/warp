@@ -6,12 +6,12 @@ use std::time::{Duration, Instant};
 use http::{self, header, StatusCode};
 use tokio::clock;
 
-use ::filter::{Filter, WrapSealed};
-use ::reject::Reject;
-use ::reply::Reply;
-use ::route::Route;
+use filter::{Filter, WrapSealed};
+use reject::Reject;
+use reply::Reply;
+use route::Route;
 
-use self::internal::{WithLog};
+use self::internal::WithLog;
 
 /// Create a wrapping filter with the specified `name` as the `target`.
 ///
@@ -155,11 +155,11 @@ mod internal {
 
     use futures::{Async, Future, Poll};
 
-    use ::filter::{FilterBase, Filter};
-    use ::reject::Reject;
-    use ::reply::{Reply, ReplySealed, Response};
-    use ::route;
     use super::{Info, Log};
+    use filter::{Filter, FilterBase};
+    use reject::Reject;
+    use reply::{Reply, ReplySealed, Response};
+    use route;
 
     #[allow(missing_debug_implementations)]
     pub struct Logged(pub(super) Response);
@@ -221,12 +221,12 @@ mod internal {
                     let resp = reply.into_response();
                     let status = resp.status();
                     (Ok(Async::Ready((Logged(resp),))), status)
-                },
+                }
                 Ok(Async::NotReady) => return Ok(Async::NotReady),
                 Err(reject) => {
                     let status = reject.status();
                     (Err(reject), status)
-                },
+                }
             };
 
             route::with(|route| {
@@ -241,4 +241,3 @@ mod internal {
         }
     }
 }
-

@@ -5,7 +5,7 @@ use std::net::SocketAddr;
 use http;
 use hyper::Body;
 
-use ::Request;
+use Request;
 
 scoped_thread_local!(static ROUTE: RefCell<Route>);
 
@@ -24,10 +24,7 @@ pub(crate) fn with<F, R>(func: F) -> R
 where
     F: FnOnce(&mut Route) -> R,
 {
-    ROUTE.with(move |route| {
-        func(&mut *route
-            .borrow_mut())
-    })
+    ROUTE.with(move |route| func(&mut *route.borrow_mut()))
 }
 
 #[derive(Debug)]
@@ -46,11 +43,7 @@ enum BodyState {
 
 impl Route {
     pub(crate) fn new(req: Request, remote_addr: Option<SocketAddr>) -> RefCell<Route> {
-        debug_assert_eq!(
-            req.uri().path().as_bytes()[0],
-            b'/',
-            "path should start with /"
-        );
+        debug_assert_eq!(req.uri().path().as_bytes()[0], b'/', "path should start with /");
 
         RefCell::new(Route {
             body: BodyState::Ready,
@@ -101,10 +94,7 @@ impl Route {
         if path.len() == index {
             self.segments_index = index;
         } else {
-            debug_assert_eq!(
-                path.as_bytes()[index],
-                b'/',
-            );
+            debug_assert_eq!(path.as_bytes()[index], b'/',);
 
             self.segments_index = index + 1;
         }
@@ -138,9 +128,8 @@ impl Route {
                 let body = mem::replace(self.req.body_mut(), Body::empty());
                 self.body = BodyState::Taken;
                 Some(body)
-            },
+            }
             BodyState::Taken => None,
         }
     }
 }
-

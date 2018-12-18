@@ -24,9 +24,9 @@ use std::sync::Arc;
 use http::header::{HeaderMap, HeaderName, HeaderValue};
 use http::HttpTryFrom;
 
-use ::filter::{Filter, Map, WrapSealed};
-use ::reply::Reply;
-use self::sealed::{WithHeader_, WithHeaders_, WithDefaultHeader_};
+use self::sealed::{WithDefaultHeader_, WithHeader_, WithHeaders_};
+use filter::{Filter, Map, WrapSealed};
+use reply::Reply;
 
 /// Wrap a [`Filter`](::Filter) that adds a header to the reply.
 ///
@@ -129,7 +129,7 @@ pub struct WithHeader {
 
 impl<F, R> WrapSealed<F> for WithHeader
 where
-    F: Filter<Extract=(R,)>,
+    F: Filter<Extract = (R,)>,
     R: Reply,
 {
     type Wrapped = Map<F, WithHeader_>;
@@ -150,7 +150,7 @@ pub struct WithHeaders {
 
 impl<F, R> WrapSealed<F> for WithHeaders
 where
-    F: Filter<Extract=(R,)>,
+    F: Filter<Extract = (R,)>,
     R: Reply,
 {
     type Wrapped = Map<F, WithHeaders_>;
@@ -163,7 +163,6 @@ where
     }
 }
 
-
 /// Wrap a `Filter` to set a header if it is not already set.
 #[derive(Clone, Debug)]
 pub struct WithDefaultHeader {
@@ -173,7 +172,7 @@ pub struct WithDefaultHeader {
 
 impl<F, R> WrapSealed<F> for WithDefaultHeader
 where
-    F: Filter<Extract=(R,)>,
+    F: Filter<Extract = (R,)>,
     R: Reply,
 {
     type Wrapped = Map<F, WithDefaultHeader_>;
@@ -203,9 +202,9 @@ where
 }
 
 mod sealed {
-    use ::generic::{Func, One};
-    use ::reply::{Reply, Reply_};
-    use super::{WithHeader, WithHeaders, WithDefaultHeader};
+    use super::{WithDefaultHeader, WithHeader, WithHeaders};
+    use generic::{Func, One};
+    use reply::{Reply, Reply_};
 
     #[derive(Clone)]
     #[allow(missing_debug_implementations)]
@@ -253,8 +252,7 @@ mod sealed {
 
         fn call(&self, args: One<R>) -> Self::Output {
             let mut resp = args.0.into_response();
-            resp
-                .headers_mut()
+            resp.headers_mut()
                 .entry(&self.with.name)
                 .expect("parsed headername is always valid")
                 .or_insert_with(|| self.with.value.clone());
@@ -263,4 +261,3 @@ mod sealed {
         }
     }
 }
-

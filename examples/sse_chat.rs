@@ -44,9 +44,7 @@ fn main() {
         .and(warp::path::param::<usize>())
         .and(warp::body::content_length_limit(500))
         .and(warp::body::concat().and_then(|body: warp::body::FullBody| {
-            std::str::from_utf8(body.bytes())
-                .map(String::from)
-                .map_err(warp::reject::custom)
+            std::str::from_utf8(body.bytes()).map(String::from).map_err(warp::reject::custom)
         }))
         .and(users.clone())
         .map(|my_id, msg, users| {
@@ -56,14 +54,11 @@ fn main() {
 
     // GET /chat -> messages stream
     let chat_recv =
-        warp::path("chat")
-            .and(warp::sse())
-            .and(users)
-            .map(|sse: warp::sse::Sse, users| {
-                // reply using server-sent events
-                let stream = user_connected(users);
-                sse.reply(warp::sse::keep(stream, None))
-            });
+        warp::path("chat").and(warp::sse()).and(users).map(|sse: warp::sse::Sse, users| {
+            // reply using server-sent events
+            let stream = user_connected(users);
+            sse.reply(warp::sse::keep(stream, None))
+        });
 
     // GET / -> index html
     let index = warp::path::end().map(|| {

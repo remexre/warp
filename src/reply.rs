@@ -36,18 +36,17 @@
 use std::error::Error as StdError;
 use std::fmt;
 
-use http::header::{CONTENT_TYPE, HeaderName, HeaderValue};
+use http::header::{HeaderName, HeaderValue, CONTENT_TYPE};
 use http::{HttpTryFrom, StatusCode};
 use hyper::Body;
 use serde::Serialize;
 use serde_json;
 
-
-use ::reject::Reject;
+use reject::Reject;
 // This re-export just looks weird in docs...
+pub(crate) use self::sealed::{ReplyHttpError, ReplySealed, Reply_, Response};
 #[doc(hidden)]
-pub use ::filters::reply as with;
-pub(crate) use self::sealed::{Reply_, ReplySealed, ReplyHttpError, Response};
+pub use filters::reply as with;
 
 /// Returns an empty `Reply` with status code `200 OK`.
 ///
@@ -64,9 +63,8 @@ pub(crate) use self::sealed::{Reply_, ReplySealed, ReplyHttpError, Response};
 ///     });
 /// ```
 #[inline]
-pub fn reply() -> impl Reply
-{
-   StatusCode::OK
+pub fn reply() -> impl Reply {
+    StatusCode::OK
 }
 
 /// Convert the value into a `Reply` with the value encoded as JSON.
@@ -117,16 +115,11 @@ impl ReplySealed for Json {
         match self.inner {
             Ok(body) => {
                 let mut res = Response::new(body.into());
-                res.headers_mut().insert(
-                    CONTENT_TYPE,
-                    HeaderValue::from_static("application/json")
-                );
+                res.headers_mut()
+                    .insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
                 res
-            },
-            Err(()) => {
-                ::reject::known(ReplyJsonError)
-                    .into_response()
             }
+            Err(()) => ::reject::known(ReplyJsonError).into_response(),
         }
     }
 }
@@ -198,10 +191,8 @@ where
     #[inline]
     fn into_response(self) -> Response {
         let mut res = Response::new(Body::from(self.body));
-        res.headers_mut().insert(
-            CONTENT_TYPE,
-            HeaderValue::from_static("text/html; charset=utf-8")
-        );
+        res.headers_mut()
+            .insert(CONTENT_TYPE, HeaderValue::from_static("text/html; charset=utf-8"));
         res
     }
 }
@@ -217,7 +208,7 @@ where
 /// - `&'static str`
 //NOTE: This list is duplicated in the module documentation.
 pub trait Reply: ReplySealed {
-    /* 
+    /*
     TODO: Currently unsure about having trait methods here, as it
     requires returning an exact type, which I'd rather not commit to.
     Additionally, it doesn't work great with `Box<Reply>`.
@@ -339,9 +330,7 @@ where
 {
     let header = match <HeaderName as HttpTryFrom<K>>::try_from(name) {
         Ok(name) => match <HeaderValue as HttpTryFrom<V>>::try_from(value) {
-            Ok(value) => {
-                Some((name, value))
-            },
+            Ok(value) => Some((name, value)),
             Err(err) => {
                 error!("with_header value error: {}", err.into());
                 None
@@ -382,8 +371,8 @@ impl<T: Reply> ReplySealed for WithHeader<T> {
 mod sealed {
     use hyper::Body;
 
-    use ::generic::{Either, One};
-    use ::reject::Reject;
+    use generic::{Either, One};
+    use reject::Reject;
 
     use super::Reply;
 
@@ -444,8 +433,7 @@ mod sealed {
                 Ok(t) => t.into_response(),
                 Err(e) => {
                     error!("reply error: {:?}", e);
-                    ::reject::known(ReplyHttpError(e))
-                        .into_response()
+                    ::reject::known(ReplyHttpError(e)).into_response()
                 }
             }
         }
@@ -530,13 +518,9 @@ mod tests {
 
     #[test]
     fn response_builder_error() {
-        let res = ::http::Response::builder()
-            .status(1337)
-            .body("woops")
-            .into_response();
+        let res = ::http::Response::builder().status(1337).body("woops").into_response();
 
         assert_eq!(res.status(), 500);
     }
 
 }
-
