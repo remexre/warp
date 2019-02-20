@@ -12,6 +12,7 @@ keywords = ["warp", "server", "http", "hyper"]
 
 [dependencies]
 bytes = "0.4.8"
+either = "1.5.0"
 futures = "0.1"
 headers = "0.2"
 http = "0.1"

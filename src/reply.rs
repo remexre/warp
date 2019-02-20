@@ -357,9 +357,10 @@ impl<T: Reply> ReplySealed for WithHeader<T> {
 
 // Seal the `Reply` trait and the `Reply_` wrapper type for now.
 mod sealed {
+    use either::Either;
     use hyper::Body;
 
-    use generic::{Either, One};
+    use generic::One;
     use reject::Reject;
 
     use super::{HeaderValue, Reply, CONTENT_TYPE};
@@ -502,8 +503,8 @@ mod sealed {
         #[inline]
         fn into_response(self) -> Response {
             match self {
-                Either::A(a) => a.into_response(),
-                Either::B(b) => b.into_response(),
+                Either::Left(a) => a.into_response(),
+                Either::Right(b) => b.into_response(),
             }
         }
     }

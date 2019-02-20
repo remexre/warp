@@ -11,9 +11,10 @@ mod unify;
 mod untuple_one;
 mod wrap;
 
+use either::Either;
 use futures::{future, Future, IntoFuture};
 
-pub(crate) use generic::{one, Combine, Either, Func, HList, One, Tuple};
+pub(crate) use generic::{one, Combine, Func, HList, One, Tuple};
 use reject::{CombineRejection, Reject, Rejection};
 use route::{self, Route};
 

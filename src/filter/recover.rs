@@ -1,9 +1,9 @@
 use std::mem;
 
+use either::Either;
 use futures::{Async, Future, IntoFuture, Poll};
 
 use super::{Filter, FilterBase, Func};
-use generic::Either;
 use route;
 
 #[derive(Clone, Copy, Debug)]
@@ -77,13 +77,13 @@ where
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         let err = match self.state {
             State::First(ref mut first, _) => match first.poll() {
-                Ok(Async::Ready(ex)) => return Ok(Async::Ready((Either::A(ex),))),
+                Ok(Async::Ready(ex)) => return Ok(Async::Ready((Either::Left(ex),))),
                 Ok(Async::NotReady) => return Ok(Async::NotReady),
                 Err(err) => err,
             },
             State::Second(ref mut second) => {
                 return match second.poll() {
-                    Ok(Async::Ready(ex2)) => Ok(Async::Ready((Either::B((ex2,)),))),
+                    Ok(Async::Ready(ex2)) => Ok(Async::Ready((Either::Right((ex2,)),))),
                     Ok(Async::NotReady) => Ok(Async::NotReady),
                     Err(e) => Err(e),
                 };
@@ -99,7 +99,7 @@ where
         };
 
         match second.poll()? {
-            Async::Ready(item) => Ok(Async::Ready((Either::B((item,)),))),
+            Async::Ready(item) => Ok(Async::Ready((Either::Right((item,)),))),
             Async::NotReady => {
                 self.state = State::Second(second);
                 Ok(Async::NotReady)

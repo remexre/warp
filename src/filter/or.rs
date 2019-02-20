@@ -1,9 +1,9 @@
 use std::mem;
 
+use either::Either;
 use futures::{Async, Future, Poll};
 
 use super::{Filter, FilterBase};
-use generic::Either;
 use reject::CombineRejection;
 use route;
 
@@ -65,14 +65,14 @@ where
         let err1 = match self.state {
             State::First(ref mut first, _) => match first.poll() {
                 Ok(Async::Ready(ex1)) => {
-                    return Ok(Async::Ready((Either::A(ex1),)));
+                    return Ok(Async::Ready((Either::Left(ex1),)));
                 }
                 Ok(Async::NotReady) => return Ok(Async::NotReady),
                 Err(e) => e,
             },
             State::Second(ref mut err1, ref mut second) => {
                 return match second.poll() {
-                    Ok(Async::Ready(ex2)) => Ok(Async::Ready((Either::B(ex2),))),
+                    Ok(Async::Ready(ex2)) => Ok(Async::Ready((Either::Right(ex2),))),
                     Ok(Async::NotReady) => Ok(Async::NotReady),
 
                     Err(e) => {
@@ -93,7 +93,7 @@ where
         };
 
         match second.poll() {
-            Ok(Async::Ready(ex2)) => Ok(Async::Ready((Either::B(ex2),))),
+            Ok(Async::Ready(ex2)) => Ok(Async::Ready((Either::Right(ex2),))),
             Ok(Async::NotReady) => {
                 self.state = State::Second(Some(err1), second);
                 Ok(Async::NotReady)

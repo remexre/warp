@@ -403,13 +403,13 @@ impl Configured {
 mod internal {
     use std::sync::Arc;
 
+    use either::Either;
     use futures::{future, Future, Poll};
     use headers::Origin;
     use http::header;
 
     use super::{Configured, CorsForbidden, Validated};
     use filter::{Filter, FilterBase, One};
-    use generic::Either;
     use reject::{CombineRejection, Rejection};
     use route;
 
@@ -443,7 +443,7 @@ mod internal {
                         config: self.config.clone(),
                         origin,
                     };
-                    future::Either::A(future::ok((Either::A((preflight,)),)))
+                    future::Either::A(future::ok((Either::Left((preflight,)),)))
                 }
                 Ok(Validated::Simple(origin)) => future::Either::B(WrappedFuture {
                     inner: self.inner.filter(),
@@ -514,15 +514,15 @@ mod internal {
         fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
             let inner = try_ready!(self.inner.poll());
             let item = if let Some((config, origin)) = self.wrapped.take() {
-                (Either::A((Wrapped {
+                (Either::Left((Wrapped {
                     config,
                     inner,
                     origin,
                 },)),)
             } else {
-                (Either::B(inner),)
+                (Either::Right(inner),)
             };
-            let item = (Either::B(item),);
+            let item = (Either::Right(item),);
             Ok(item.into())
         }
     }

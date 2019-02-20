@@ -83,6 +83,7 @@
 //! [Filter]: trait.Filter.html
 
 extern crate bytes;
+extern crate either;
 #[macro_use]
 extern crate futures;
 extern crate headers;

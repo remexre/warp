@@ -1,6 +1,7 @@
+use either::Either;
 use futures::{Async, Future, Poll};
 
-use super::{Either, Filter, FilterBase, Tuple};
+use super::{Filter, FilterBase, Tuple};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Unify<F> {
@@ -38,8 +39,8 @@ where
     #[inline]
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         let unified = match try_ready!(self.inner.poll()) {
-            (Either::A(a),) => a,
-            (Either::B(b),) => b,
+            (Either::Left(a),) => a,
+            (Either::Right(b),) => b,
         };
         Ok(Async::Ready(unified))
     }
