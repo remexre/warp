@@ -64,12 +64,36 @@ use crate::{Filter, Rejection, Reply};
 
 /// Server-sent event message
 pub trait ServerSentEvent: SseFormat + Sized + Send + Sync + 'static {
-    /// Convert to either A
+    /// Convert to the left side of an Either.
+    ///
+    /// ```
+    /// # use warp::sse::{ServerSentEvent, comment, event};
+    /// # fn main() {
+    /// # let condition = true;
+    /// if condition {
+    ///     comment("foo").into_a()
+    /// } else {
+    ///     event("bar").into_b()
+    /// }
+    /// # ;}
+    /// ```
     fn into_a<B>(self) -> EitherServerSentEvent<Self, B> {
         EitherServerSentEvent::A(self)
     }
 
-    /// Convert to either B
+    /// Convert to the right side of an Either.
+    ///
+    /// ```
+    /// # use warp::sse::{ServerSentEvent, comment, event};
+    /// # fn main() {
+    /// # let condition = true;
+    /// if condition {
+    ///     comment("foo").into_a()
+    /// } else {
+    ///     event("bar").into_b()
+    /// }
+    /// # ;}
+    /// ```
     fn into_b<A>(self) -> EitherServerSentEvent<A, Self> {
         EitherServerSentEvent::B(self)
     }
